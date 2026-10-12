@@ -4,18 +4,54 @@ import { eq, and } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { createGoogleEvent, deleteGoogleEvent } from './calendar';
 
+import { Resend } from 'resend';
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const DEFAULT_FROM = process.env.EMAIL_FROM || 'Slotly <onboarding@resend.dev>';
+
 /**
- * Mock email sender representing Resend / Nodemailer.
- * In a real environment, this would call resend.emails.send(...)
+ * Sends an email using Resend if RESEND_API_KEY is configured.
+ * Falls back to console logging if the key is missing.
  */
-async function sendEmailMock(to: string, subject: string, html: string) {
-  console.log('----------------------------------------------------');
-  console.log(`📧 MOCK EMAIL SENT TO: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`Body (HTML):\n${html}`);
-  console.log('----------------------------------------------------');
-  // Simulate network delay
-  await new Promise(res => setTimeout(res, 500));
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  from = DEFAULT_FROM,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+}) {
+  if (resend) {
+    try {
+      const response = await resend.emails.send({
+        from,
+        to: [to],
+        subject,
+        html,
+      });
+
+      if (response.error) {
+        console.error(`❌ Resend email dispatch failed to [${to}]:`, response.error);
+        throw new Error(`Resend dispatch error: ${response.error.message}`);
+      }
+
+      console.log(`📧 [Resend] Successfully delivered email to ${to} (Message ID: ${response.data?.id})`);
+      return response.data;
+    } catch (err: any) {
+      console.error(`❌ Error delivering email via Resend to ${to}:`, err);
+      throw err;
+    }
+  } else {
+    console.log('----------------------------------------------------');
+    console.log(`📧 [MOCK EMAIL - No RESEND_API_KEY set] TO: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body (HTML):\n${html}`);
+    console.log('----------------------------------------------------');
+  }
 }
 
 export async function processOutbox() {
@@ -43,7 +79,7 @@ export async function processOutbox() {
           <p><a href="${inviteUrl}">Click here to accept or decline your invitation</a>.</p>
           <p>This invitation link will expire in 7 days.</p>
         `;
-        await sendEmailMock(payload.email, subject, html);
+        await sendEmail({ to: payload.email, subject, html });
 
         await db.update(outboxMessages)
           .set({ status: 'sent', processedAt: new Date() })
@@ -78,15 +114,15 @@ export async function processOutbox() {
       const renderMeetingInfo = (b: typeof booking) => {
         if (b.meetingStatus === 'ready' && b.meetingUrl) {
           return `
-            <div style="margin: 16px 0; padding: 12px 16px; background-color: #EEF2FF; border-left: 4px solid #4359E8; border-radius: 4px;">
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #EEF2FF; border-left: 4px solid #4F46E5; border-radius: 6px;">
               <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1E1B4B;">📹 Video Meeting Link:</p>
-              <p style="margin: 6px 0 0 0;"><a href="${b.meetingUrl}" style="color: #4359E8; font-weight: 600; word-break: break-all;">${b.meetingUrl}</a></p>
+              <p style="margin: 6px 0 0 0;"><a href="${b.meetingUrl}" style="color: #4F46E5; font-weight: 600; word-break: break-all;">${b.meetingUrl}</a></p>
             </div>
           `;
         }
         if (b.meetingStatus === 'pending') {
           return `
-            <div style="margin: 16px 0; padding: 12px 16px; background-color: #FEF3C7; border-left: 4px solid #D97706; border-radius: 4px;">
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #FEF3C7; border-left: 4px solid #D97706; border-radius: 6px;">
               <p style="margin: 0; font-size: 14px; font-weight: 600; color: #92400E;">⏳ Google Meet link is being generated...</p>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #78350F;">The video link is pending conference creation and will appear in your calendar invite and management page shortly.</p>
             </div>
@@ -94,7 +130,7 @@ export async function processOutbox() {
         }
         if (b.meetingStatus === 'failed') {
           return `
-            <div style="margin: 16px 0; padding: 12px 16px; background-color: #FEE2E2; border-left: 4px solid #DC2626; border-radius: 4px;">
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #FEE2E2; border-left: 4px solid #DC2626; border-radius: 6px;">
               <p style="margin: 0; font-size: 14px; font-weight: 600; color: #991B1B;">⚠️ Video Meeting Notice</p>
               <p style="margin: 4px 0 0 0; font-size: 13px; color: #7F1D1D;">Automatic video conference link generation could not be completed. Your host will provide meeting details directly.</p>
             </div>
@@ -104,7 +140,10 @@ export async function processOutbox() {
           const loc = b.eventType.location;
           const display = loc.startsWith('custom-link:') ? loc.slice('custom-link:'.length) : loc === 'phone' ? 'Phone call' : loc === 'in-person' ? 'In person' : loc;
           return `
-            <p><strong>Location / Meeting Info:</strong> ${display}</p>
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #F8FAFC; border-left: 4px solid #64748B; border-radius: 6px;">
+              <p style="margin: 0; font-size: 14px; font-weight: 600; color: #334155;">📍 Location / Details:</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; color: #0F172A;">${display}</p>
+            </div>
           `;
         }
         return '';
@@ -114,27 +153,35 @@ export async function processOutbox() {
         const subject = `Confirmed: ${eventName} with ${host.name}`;
         const meetingHtml = renderMeetingInfo(booking);
         const html = `
-          <h1>Booking Confirmed</h1>
-          <p>Hi ${guestName},</p>
-          <p>Your meeting <strong>${eventName}</strong> with ${host.name} is confirmed for:</p>
-          <p><strong>${timeStr} (${booking.guestTimezone})</strong></p>
-          ${meetingHtml}
-          <p>Need to make changes? <a href="${managementUrl}">Click here to reschedule or cancel</a>.</p>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+            <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Booking Confirmed</h1>
+            <p style="font-size: 15px; line-height: 1.5;">Hi <strong>${guestName}</strong>,</p>
+            <p style="font-size: 15px; line-height: 1.5;">Your meeting <strong>${eventName}</strong> with <strong>${host.name}</strong> is confirmed for:</p>
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #0F172A;">🗓️ ${timeStr} (${booking.guestTimezone})</p>
+            </div>
+            ${meetingHtml}
+            <p style="font-size: 14px; color: #64748B; margin-top: 24px;">Need to make changes? <a href="${managementUrl}" style="color: #4F46E5; font-weight: 500;">Click here to reschedule or cancel</a>.</p>
+          </div>
         `;
-        await sendEmailMock(guestEmail, subject, html);
+        await sendEmail({ to: guestEmail, subject, html });
       } 
       else if (msg.type === 'HOST_NOTIFICATION') {
         const subject = `New Booking: ${eventName} with ${guestName}`;
         const meetingHtml = renderMeetingInfo(booking);
         const html = `
-          <h1>New Booking Received</h1>
-          <p>Hi ${host.name},</p>
-          <p><strong>${guestName}</strong> (${guestEmail}) has booked <strong>${eventName}</strong> for:</p>
-          <p><strong>${timeStr}</strong></p>
-          ${meetingHtml}
-          <p>You can manage this in your <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/bookings">Slotly Dashboard</a>.</p>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+            <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 16px;">New Booking Received</h1>
+            <p style="font-size: 15px; line-height: 1.5;">Hi <strong>${host.name}</strong>,</p>
+            <p style="font-size: 15px; line-height: 1.5;"><strong>${guestName}</strong> (<a href="mailto:${guestEmail}" style="color: #4F46E5;">${guestEmail}</a>) has booked <strong>${eventName}</strong> for:</p>
+            <div style="margin: 16px 0; padding: 14px 18px; background-color: #F8FAFC; border-radius: 6px; border: 1px solid #E2E8F0;">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #0F172A;">🗓️ ${timeStr}</p>
+            </div>
+            ${meetingHtml}
+            <p style="font-size: 14px; color: #64748B; margin-top: 24px;">You can view and manage this in your <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/bookings" style="color: #4F46E5; font-weight: 500;">Slotly Dashboard</a>.</p>
+          </div>
         `;
-        await sendEmailMock(host.email, subject, html);
+        await sendEmail({ to: host.email, subject, html });
       }
       else if (msg.type === 'TEAM_INVITATION') {
         const inviteUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/team/invite/${payload.rawToken}`;
@@ -145,12 +192,14 @@ export async function processOutbox() {
         const teamName = team ? team.name : 'a team';
         const subject = `You've been invited to join ${teamName} on Slotly`;
         const html = `
-          <h1>Team Invitation</h1>
-          <p>You have been invited to join <strong>${teamName}</strong> on Slotly.</p>
-          <p><a href="${inviteUrl}">Click here to accept or decline your invitation</a>.</p>
-          <p>This invitation link will expire in 7 days.</p>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+            <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Team Invitation</h1>
+            <p style="font-size: 15px; line-height: 1.5;">You have been invited to join <strong>${teamName}</strong> on Slotly.</p>
+            <p style="margin: 20px 0;"><a href="${inviteUrl}" style="background-color: #4F46E5; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">Accept or Decline Invitation</a></p>
+            <p style="font-size: 13px; color: #64748B;">This invitation link will expire in 7 days.</p>
+          </div>
         `;
-        await sendEmailMock(payload.email, subject, html);
+        await sendEmail({ to: payload.email, subject, html });
       }
       else if (msg.type === 'CANCELLATION') {
         const cancelledBy = payload.cancelledBy;
@@ -159,19 +208,23 @@ export async function processOutbox() {
         if (cancelledBy === 'host') {
           const subject = `Cancelled: ${eventName} with ${host.name}`;
           const html = `
-            <h1>Booking Cancelled</h1>
-            <p>Hi ${guestName},</p>
-            <p>Unfortunately, your meeting <strong>${eventName}</strong> on ${timeStr} has been cancelled by the host.</p>
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+              <h1 style="color: #DC2626; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Booking Cancelled</h1>
+              <p style="font-size: 15px; line-height: 1.5;">Hi <strong>${guestName}</strong>,</p>
+              <p style="font-size: 15px; line-height: 1.5;">Your meeting <strong>${eventName}</strong> scheduled for <strong>${timeStr}</strong> has been cancelled by the host.</p>
+            </div>
           `;
-          await sendEmailMock(guestEmail, subject, html);
+          await sendEmail({ to: guestEmail, subject, html });
         } else {
           const subject = `Cancelled: ${eventName} with ${guestName}`;
           const html = `
-            <h1>Booking Cancelled</h1>
-            <p>Hi ${host.name},</p>
-            <p>Your meeting <strong>${eventName}</strong> on ${timeStr} was cancelled by the guest.</p>
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+              <h1 style="color: #DC2626; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Booking Cancelled</h1>
+              <p style="font-size: 15px; line-height: 1.5;">Hi <strong>${host.name}</strong>,</p>
+              <p style="font-size: 15px; line-height: 1.5;">Your meeting <strong>${eventName}</strong> scheduled for <strong>${timeStr}</strong> was cancelled by the guest.</p>
+            </div>
           `;
-          await sendEmailMock(host.email, subject, html);
+          await sendEmail({ to: host.email, subject, html });
         }
       }
       else if (msg.type === 'CALENDAR_SYNC_CREATE') {
