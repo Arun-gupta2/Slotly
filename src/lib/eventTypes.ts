@@ -17,9 +17,11 @@ function toSlug(name: string): string {
     .slice(0, 60);
 }
 
+import { getBaseUrl } from './url';
+
 export async function getBookingUrl(slug: string): Promise<string> {
   const user = await getSessionUser();
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const baseUrl = getBaseUrl();
   return `${baseUrl}/book/${user.username}/${slug}`;
 }
 

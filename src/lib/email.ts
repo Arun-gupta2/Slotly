@@ -66,7 +66,8 @@ export async function processOutbox() {
       const payload = JSON.parse(msg.payload);
 
       if (msg.type === 'TEAM_INVITATION') {
-        const inviteUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/team/invite/${payload.rawToken}`;
+        const { getBaseUrl } = await import('./url');
+        const inviteUrl = `${getBaseUrl()}/team/invite/${payload.rawToken}`;
         const team = await db.query.teams.findFirst({
           where: eq(teams.id, payload.teamId),
         });
@@ -74,10 +75,12 @@ export async function processOutbox() {
         const teamName = team ? team.name : 'a team';
         const subject = `You've been invited to join ${teamName} on Slotly`;
         const html = `
-          <h1>Team Invitation</h1>
-          <p>You have been invited to join <strong>${teamName}</strong> on Slotly.</p>
-          <p><a href="${inviteUrl}">Click here to accept or decline your invitation</a>.</p>
-          <p>This invitation link will expire in 7 days.</p>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
+            <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Team Invitation</h1>
+            <p style="font-size: 15px; line-height: 1.5;">You have been invited to join <strong>${teamName}</strong> on Slotly.</p>
+            <p style="margin: 20px 0;"><a href="${inviteUrl}" style="background-color: #4F46E5; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">Accept or Decline Invitation</a></p>
+            <p style="font-size: 13px; color: #64748B;">This invitation link will expire in 7 days.</p>
+          </div>
         `;
         await sendEmail({ to: payload.email, subject, html });
 
@@ -108,8 +111,10 @@ export async function processOutbox() {
       const guestName = booking.guestName;
       const guestEmail = booking.guestEmail;
       
+      const { getBaseUrl } = await import('./url');
+      const baseUrl = getBaseUrl();
       const timeStr = `${format(booking.startTime, 'MMM d, yyyy h:mm a')} - ${format(booking.endTime, 'h:mm a')}`;
-      const managementUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/manage-booking/${booking.managementToken}`;
+      const managementUrl = `${baseUrl}/manage-booking/${booking.managementToken}`;
 
       const renderMeetingInfo = (b: typeof booking) => {
         if (b.meetingStatus === 'ready' && b.meetingUrl) {
@@ -178,28 +183,10 @@ export async function processOutbox() {
               <p style="margin: 0; font-size: 15px; font-weight: 600; color: #0F172A;">🗓️ ${timeStr}</p>
             </div>
             ${meetingHtml}
-            <p style="font-size: 14px; color: #64748B; margin-top: 24px;">You can view and manage this in your <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/bookings" style="color: #4F46E5; font-weight: 500;">Slotly Dashboard</a>.</p>
+            <p style="font-size: 14px; color: #64748B; margin-top: 24px;">You can view and manage this in your <a href="${baseUrl}/dashboard/bookings" style="color: #4F46E5; font-weight: 500;">Slotly Dashboard</a>.</p>
           </div>
         `;
         await sendEmail({ to: host.email, subject, html });
-      }
-      else if (msg.type === 'TEAM_INVITATION') {
-        const inviteUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/team/invite/${payload.rawToken}`;
-        const team = await db.query.teams.findFirst({
-          where: eq(teams.id, payload.teamId),
-        });
-
-        const teamName = team ? team.name : 'a team';
-        const subject = `You've been invited to join ${teamName} on Slotly`;
-        const html = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; color: #1E293B;">
-            <h1 style="color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 16px;">Team Invitation</h1>
-            <p style="font-size: 15px; line-height: 1.5;">You have been invited to join <strong>${teamName}</strong> on Slotly.</p>
-            <p style="margin: 20px 0;"><a href="${inviteUrl}" style="background-color: #4F46E5; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">Accept or Decline Invitation</a></p>
-            <p style="font-size: 13px; color: #64748B;">This invitation link will expire in 7 days.</p>
-          </div>
-        `;
-        await sendEmail({ to: payload.email, subject, html });
       }
       else if (msg.type === 'CANCELLATION') {
         const cancelledBy = payload.cancelledBy;

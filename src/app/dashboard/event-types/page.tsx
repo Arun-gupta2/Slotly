@@ -88,7 +88,16 @@ export default function EventTypesPage() {
   // ── Copy link ────────────────────────────────────────────────────────────
 
   async function handleCopyLink(et: EventType) {
-    const url = await getBookingUrl(et.slug);
+    let url = '';
+    if (typeof window !== 'undefined' && window.location.origin) {
+      // Direct client origin guarantees the real production domain is copied in browser
+      const fullUrl = await getBookingUrl(et.slug);
+      const path = fullUrl.replace(/^https?:\/\/[^/]+/, '');
+      url = `${window.location.origin}${path}`;
+    } else {
+      url = await getBookingUrl(et.slug);
+    }
+
     try {
       await navigator.clipboard.writeText(url);
       toast({ variant: 'success', title: 'Link copied!', message: url });

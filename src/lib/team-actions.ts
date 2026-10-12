@@ -226,19 +226,20 @@ export async function inviteTeamMember(teamId: string, email: string) {
     }),
   });
 
-  // Asynchronously process outbox
+  // Asynchronously process outbox with await so serverless/Vercel functions do not terminate early
   const { processOutbox } = await import('./email');
-  processOutbox().catch(console.error);
+  await processOutbox().catch(console.error);
 
   revalidatePath(`/dashboard/teams/${teamId}`);
   
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const { getBaseUrl } = await import('./url');
+  const baseUrl = getBaseUrl();
   const inviteUrl = `${baseUrl}/team/invite/${rawToken}`;
 
   // Safe user feedback without revealing account existence status to prevent enumeration
   return { 
     success: true, 
-    message: 'Invitation generated successfully', 
+    message: 'Invitation sent and generated successfully', 
     inviteUrl 
   };
 }

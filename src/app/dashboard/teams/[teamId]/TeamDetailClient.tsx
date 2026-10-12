@@ -39,7 +39,16 @@ export default function TeamDetailClient({ team }: Props) {
 
     try {
       const res = await inviteTeamMember(team.id, inviteEmail);
-      setInviteMessage({ text: res.message, isError: false, inviteUrl: res.inviteUrl });
+      let inviteUrl = res.inviteUrl;
+      if (typeof window !== 'undefined' && window.location.origin && inviteUrl) {
+        const path = inviteUrl.replace(/^https?:\/\/[^/]+/, '');
+        inviteUrl = `${window.location.origin}${path}`;
+      }
+      setInviteMessage({ 
+        text: `Invitation email sent to ${inviteEmail}! You can also copy the direct invitation link below:`, 
+        isError: false, 
+        inviteUrl 
+      });
       setInviteEmail('');
       router.refresh();
     } catch (err: any) {
