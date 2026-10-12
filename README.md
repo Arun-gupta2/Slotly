@@ -20,22 +20,4 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run lint` | Run ESLint |
 | `npm run type-check` | Run TypeScript type check |
 
-## Project Structure
 
-```
-src/
-  app/
-    layout.tsx        # Root layout — fonts, metadata, global styles
-    page.tsx          # Landing page (assembles all sections)
-    globals.css       # Design tokens + global resets
-  components/
-    ui/               # Generic reusable primitives (Button, etc.)
-    sections/         # Landing page sections (Nav, Hero, Features, etc.)
-```
-
-## Milestones
-
-- [x] **Milestone 1** — Project foundation + Landing page
-- [ ] Milestone 2 — Authentication + User dashboard
-- [ ] Milestone 3 — Booking page + Availability management
-- [ ] Milestone 4 — Guest booking flow
