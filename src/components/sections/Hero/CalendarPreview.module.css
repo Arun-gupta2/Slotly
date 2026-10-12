@@ -1,0 +1,162 @@
+/* ── Card shell ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  font-size: var(--text-xs);
+  font-family: var(--font-body);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.calIcon {
+  font-size: var(--text-base);
+}
+
+.confirmedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: #16a34a;
+  background-color: #dcfce7;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-2);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ── Calendar grid ───────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  /* time col + 5 day cols */
+  grid-template-columns: 44px repeat(5, 1fr);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  gap: 0 var(--space-2);
+}
+
+/* ── Time column ─────────────────────────────────────────────────────────── */
+.timeCol {
+  display: flex;
+  flex-direction: column;
+  padding-top: 28px; /* offset to align with day body slots */
+}
+
+.timeLabel {
+  height: 40px;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+  color: var(--color-subtle);
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ── Day column ──────────────────────────────────────────────────────────── */
+.dayCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.dayHeader {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--color-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dayBody {
+  position: relative;
+  display: grid;
+  grid-template-rows: repeat(var(--slots), 40px);
+}
+
+/* ── Empty slot lines ────────────────────────────────────────────────────── */
+.slot {
+  border-top: 1px solid var(--color-border);
+  grid-row: calc(var(--slot) + 1);
+}
+
+/* ── Event blocks ────────────────────────────────────────────────────────── */
+.event {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: calc(var(--start) * 40px + 2px);
+  height: calc(var(--span) * 40px - 4px);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-2);
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+}
+
+.eventLabel {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── Event type colours ──────────────────────────────────────────────────── */
+.booked {
+  background-color: var(--color-accent-lt);
+  border: 1px solid var(--color-accent-mid);
+  color: var(--color-accent-dk);
+}
+
+.available {
+  background-color: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.accent {
+  background-color: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+/* ── Demo footer note ────────────────────────────────────────────────────── */
+.demoNote {
+  text-align: center;
+  padding: var(--space-3);
+  font-size: 10px;
+  color: var(--color-subtle);
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}

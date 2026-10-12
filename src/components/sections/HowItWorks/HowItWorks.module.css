@@ -1,0 +1,126 @@
+/* ── Two-column layout ────────────────────────────────────────────────────── */
+.inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-16);
+}
+
+@media (min-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr 1.1fr;
+    align-items: start;
+  }
+}
+
+/* ── Left: sticky heading ─────────────────────────────────────────────────── */
+.sideHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (min-width: 900px) {
+  .sideHeader {
+    position: sticky;
+    top: calc(var(--nav-height) + var(--space-8));
+  }
+}
+
+.heading {
+  font-size: clamp(var(--text-3xl), 3.5vw, var(--text-5xl));
+  color: var(--color-text);
+}
+
+.subheading {
+  font-size: var(--text-base);
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+  max-width: 360px;
+}
+
+/* ── Steps list ───────────────────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: var(--space-5);
+  padding-bottom: var(--space-10);
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+/* ── Vertical connector line ──────────────────────────────────────────────── */
+.connector {
+  position: absolute;
+  left: 25px; /* center of the 52px number circle */
+  top: 52px;  /* below the number circle */
+  width: 2px;
+  background: linear-gradient(to bottom, var(--color-accent-mid), transparent);
+  bottom: var(--space-6);
+  border-radius: var(--radius-full);
+}
+
+/* ── Step number ──────────────────────────────────────────────────────────── */
+.stepNumber {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background-color: var(--color-accent-lt);
+  border: 2px solid var(--color-accent-mid);
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color     var(--duration-base) var(--ease-out);
+}
+
+.step:hover .stepNumber {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
+/* ── Step content ─────────────────────────────────────────────────────────── */
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.stepEyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.stepTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: var(--leading-snug);
+}
+
+.stepBody {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  line-height: var(--leading-normal);
+}

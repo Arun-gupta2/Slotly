@@ -1,0 +1,39 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Published — green */
+.published {
+  background-color: #ECFDF5;
+  color: #065F46;
+}
+
+.published .dot {
+  background-color: #10B981;
+}
+
+/* Draft — neutral grey */
+.draft {
+  background-color: #F3F4F6;
+  color: #4B5563;
+}
+
+.draft .dot {
+  background-color: #9CA3AF;
+}
