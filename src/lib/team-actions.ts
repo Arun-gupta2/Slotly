@@ -232,8 +232,15 @@ export async function inviteTeamMember(teamId: string, email: string) {
 
   revalidatePath(`/dashboard/teams/${teamId}`);
   
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const inviteUrl = `${baseUrl}/team/invite/${rawToken}`;
+
   // Safe user feedback without revealing account existence status to prevent enumeration
-  return { success: true, message: 'Invitation processed successfully' };
+  return { 
+    success: true, 
+    message: 'Invitation generated successfully', 
+    inviteUrl 
+  };
 }
 
 export async function getInvitationByToken(token: string) {

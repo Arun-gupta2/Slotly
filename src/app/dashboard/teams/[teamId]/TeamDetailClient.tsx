@@ -16,7 +16,7 @@ export default function TeamDetailClient({ team }: Props) {
   // Invite state
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<{ text: string; isError: boolean; inviteUrl?: string } | null>(null);
 
   // Rename state
   const [isEditingName, setIsEditingName] = useState(false);
@@ -39,7 +39,7 @@ export default function TeamDetailClient({ team }: Props) {
 
     try {
       const res = await inviteTeamMember(team.id, inviteEmail);
-      setInviteMessage({ text: res.message, isError: false });
+      setInviteMessage({ text: res.message, isError: false, inviteUrl: res.inviteUrl });
       setInviteEmail('');
       router.refresh();
     } catch (err: any) {
@@ -387,15 +387,69 @@ export default function TeamDetailClient({ team }: Props) {
         )}
 
         {inviteMessage && (
-          <p
+          <div
             style={{
-              fontSize: 'var(--text-xs)',
-              color: inviteMessage.isError ? '#DC2626' : '#059669',
-              marginBottom: 'var(--space-4)',
+              padding: '12px 16px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: inviteMessage.isError ? '#FEE2E2' : '#F0FDF4',
+              border: `1px solid ${inviteMessage.isError ? '#FCA5A5' : '#BBF7D0'}`,
+              marginBottom: 'var(--space-6)',
             }}
           >
-            {inviteMessage.text}
-          </p>
+            <p
+              style={{
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: inviteMessage.isError ? '#DC2626' : '#15803D',
+                marginBottom: inviteMessage.inviteUrl ? '8px' : '0',
+              }}
+            >
+              {inviteMessage.text}
+            </p>
+            {inviteMessage.inviteUrl && (
+              <div>
+                <p style={{ fontSize: 'var(--text-xs)', color: '#374151', marginBottom: '6px' }}>
+                  Share this invitation link with the member:
+                </p>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={inviteMessage.inviteUrl}
+                    style={{
+                      flex: 1,
+                      padding: '6px 10px',
+                      fontSize: 'var(--text-xs)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid #D1D5DB',
+                      backgroundColor: '#ffffff',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (inviteMessage.inviteUrl) {
+                        navigator.clipboard.writeText(inviteMessage.inviteUrl);
+                        alert('Invitation link copied to clipboard!');
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 600,
+                      backgroundColor: '#15803D',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Members Table */}
